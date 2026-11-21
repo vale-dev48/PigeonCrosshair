@@ -46,7 +46,8 @@ void PreviewWidget::paintEvent(QPaintEvent*) {
     const CrosshairConfig& c = m_store->config();
     const qreal ext = CrosshairRenderer::extent(c);
     const qreal zoom = std::clamp(std::min(width(), height()) * 0.36 / ext, 1.0, 5.0);
-    CrosshairRenderer::paint(p, c, r.center() + QPointF(c.offsetX, c.offsetY) * zoom, zoom);
+    // L'offset vale solo per l'overlay sullo schermo: l'anteprima mostra sempre il mirino al centro.
+    CrosshairRenderer::paint(p, c, r.center(), zoom);
 
     p.setClipping(false);
     p.setPen(QPen(light ? QColor(0, 0, 0, 50) : QColor(255, 255, 255, 30), 1));
