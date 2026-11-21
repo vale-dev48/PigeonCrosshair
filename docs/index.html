@@ -77,13 +77,26 @@ input[type=range]{width:100%;accent-color:var(--ink);height:24px}
 
 .stage canvas#gl{display:block}
 .hud{position:absolute;left:16px;top:14px;display:flex;gap:16px;align-items:center;color:#fff;font:700 15px/1 var(--body);pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.hud .bar{width:120px;height:8px;border-radius:4px;background:rgba(255,255,255,.22);overflow:hidden}
-.hud .bar i{display:block;height:100%;width:100%;background:#4fe0a0;transition:width .12s}
 .start{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:12px;text-align:center;background:rgba(10,13,18,.38);color:#fff;cursor:pointer;padding:20px}
 .start[hidden],.nogl[hidden]{display:none}
 .start p{margin:0}
 .start .big{font:800 clamp(22px,3.4vw,38px)/1.1 var(--display)}
 .start .keys{font-size:15px;opacity:.88;max-width:48ch}
+.vitals{position:absolute;left:16px;bottom:16px;display:grid;gap:6px;width:min(260px,42%);pointer-events:none}
+.vbar{position:relative;height:20px;border-radius:5px;background:rgba(10,13,18,.62);overflow:hidden}
+.vbar i{position:absolute;inset:0 auto 0 0;width:100%;transition:width .12s}
+.vbar.sh i{background:#3fa9ff}
+.vbar.hp i{background:#4fe08a}
+.vbar b{position:absolute;inset:0;display:flex;align-items:center;padding-left:8px;font:800 12px/1 var(--body);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75)}
+.weapons{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;pointer-events:none}
+.weapons span{font:700 13px/1 var(--body);color:#fff;background:rgba(10,13,18,.55);padding:9px 12px;border-radius:8px;opacity:.6;border:2px solid transparent}
+.weapons span.on{opacity:1;border-color:#fff}
+.weapons kbd{font:inherit;opacity:.7;margin-right:6px}
+.dmgs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.dmg{position:absolute;font:800 18px/1 var(--display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.85);transform:translate(-50%,-50%);animation:dmgf .8s ease-out forwards}
+.dmg.sh{color:#6cc6ff}
+.dmg.head{color:#ffd84a;font-size:24px}
+@keyframes dmgf{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(calc(-50% + var(--dx,0px)),-170%) scale(1)}}
 .hurt{position:absolute;inset:0;pointer-events:none;opacity:0;box-shadow:inset 0 0 120px 30px rgba(255,40,40,.85)}
 .nogl{position:absolute;inset:0;display:grid;place-items:center;color:#fff;background:#222a3d;padding:24px;text-align:center}
 .fs{position:absolute;right:14px;bottom:14px;font:700 13px/1 var(--body);color:#fff;background:rgba(10,13,18,.55);border:0;border-radius:8px;padding:9px 12px;cursor:pointer}
@@ -152,8 +165,17 @@ footer{margin-top:80px;border-top:2px solid var(--ink);padding:24px 0 48px;displ
           <canvas id="gl"></canvas>
           <canvas id="cv"></canvas>
           <div class="hurt" id="hurt"></div>
-          <div class="hud"><span><b id="kills">0</b> <span data-i18n="kills">Eliminazioni</span></span><span class="bar" aria-hidden="true"><i id="hpfill"></i></span></div>
-          <div class="start" id="start"><p class="big" id="startMsg"></p><p class="keys" data-i18n="keys">WASD muovi. Maiusc corri. Spazio salta. Clic spara. Esc pausa.</p></div>
+          <div class="hud"><span><b id="kills">0</b> <span data-i18n="kills">Eliminazioni</span></span></div>
+          <div class="dmgs" id="dmgs" aria-hidden="true"></div>
+          <div class="vitals" aria-label="Scudo e vita">
+            <div class="vbar sh"><i id="shfill"></i><b id="shnum">100</b></div>
+            <div class="vbar hp"><i id="hpfill"></i><b id="hpnum">100</b></div>
+          </div>
+          <div class="weapons" aria-hidden="true">
+            <span id="w0" class="on"><kbd>1</kbd><span data-i18n="w_ar">AR</span></span>
+            <span id="w1"><kbd>2</kbd><span data-i18n="w_sg">Pompa</span></span>
+          </div>
+          <div class="start" id="start"><p class="big" id="startMsg"></p><p class="keys" data-i18n="keys">WASD muovi. Maiusc corri. C accovacciati. Spazio salta. Clic spara. Tasto destro mira. 1 e 2 cambiano arma. Esc pausa.</p></div>
           <div class="nogl" id="nogl" hidden><p data-i18n="nogl">Il tuo browser non supporta WebGL: il mini gioco non parte.</p></div>
           <p class="badge" data-i18n="badge">Anteprima nel browser</p>
           <button class="fs" id="fs" type="button" data-i18n="fs">Schermo intero</button>
@@ -237,7 +259,7 @@ const T = {
     q3:"Windows dice che l'app non è riconosciuta.",a3:"Succede con le app non firmate. Clicca su Ulteriori informazioni, poi su Esegui comunque. Il codice è pubblico e puoi compilarlo da solo.",
     q4:"Dove salva le impostazioni?",a4:"In un file di testo qui:",
     foot:"Fatto con C++ e Qt. Licenza MIT.",foot2:"Codice sorgente e segnalazioni su GitHub",
-    kills:"Eliminazioni",keys:"WASD muovi. Maiusc corri. Spazio salta. Clic spara. Esc pausa.",play:"Clicca per giocare",resume:"In pausa. Clicca per riprendere",over:"Sei stato eliminato. Eliminazioni: {n}. Clicca per riprovare",desktop:"Serve un computer con mouse e tastiera.",nogl:"Il tuo browser non supporta WebGL: il mini gioco non parte.",fs:"Schermo intero",game:"Mini gioco",fov:"FOV",sens:"Sensibilità"},
+    kills:"Eliminazioni",keys:"WASD muovi. Maiusc corri. C accovacciati. Spazio salta. Clic spara. Tasto destro mira. 1 e 2 cambiano arma. Esc pausa.",w_ar:"AR",w_sg:"Pompa",play:"Clicca per giocare",resume:"In pausa. Clicca per riprendere",over:"Sei stato eliminato. Eliminazioni: {n}. Clicca per riprovare",desktop:"Serve un computer con mouse e tastiera.",nogl:"Il tuo browser non supporta WebGL: il mini gioco non parte.",fs:"Schermo intero",game:"Mini gioco",fov:"FOV",sens:"Sensibilità"},
   en:{gh:"Code on GitHub",h1:"The crosshair that always stays on top of your game.",lead:"PigeonCrosshair is a free overlay for Windows. It draws a transparent crosshair above any window and lets clicks pass through. Try it below in a tiny 3D game.",
     hint:"Move your mouse over the scene",badge:"Browser preview",shape:"Shape",color:"Color",
     note:"This is only a preview. The real overlay, on top of your games, is the Windows app below.",
@@ -257,7 +279,7 @@ const T = {
     q3:"Windows says the app isn't recognized.",a3:"That happens with unsigned apps. Click More info, then Run anyway. The code is public and you can build it yourself.",
     q4:"Where are settings stored?",a4:"In a text file here:",
     foot:"Built with C++ and Qt. MIT license.",foot2:"Source code and issues on GitHub",
-    kills:"Kills",keys:"WASD move. Shift sprint. Space jump. Click shoot. Esc pause.",play:"Click to play",resume:"Paused. Click to resume",over:"You were taken out. Kills: {n}. Click to retry",desktop:"This needs a computer with mouse and keyboard.",nogl:"Your browser does not support WebGL: the mini game cannot start.",fs:"Fullscreen",game:"Mini game",fov:"FOV",sens:"Sensitivity"}
+    kills:"Kills",keys:"WASD move. Shift sprint. C crouch. Space jump. Click shoot. Right click aim. 1 and 2 switch weapon. Esc pause.",w_ar:"AR",w_sg:"Shotgun",play:"Click to play",resume:"Paused. Click to resume",over:"You were taken out. Kills: {n}. Click to retry",desktop:"This needs a computer with mouse and keyboard.",nogl:"Your browser does not support WebGL: the mini game cannot start.",fs:"Fullscreen",game:"Mini game",fov:"FOV",sens:"Sensitivity"}
 };
 let lang = "it";
 window.pcT = () => T[lang];
