@@ -1,0 +1,51 @@
+* { font-family: "Segoe UI Variable", "Segoe UI", sans-serif; font-size: 13px; color: #e6e8ee; }
+QWidget#root, QScrollArea, QScrollArea > QWidget > QWidget { background: #0e1014; }
+QScrollArea { border: none; background: #0e1014; }
+QScrollArea > QWidget > QWidget { background: #0e1014; }
+QFrame#card { background: #161920; border: 1px solid #232733; border-radius: 12px; }
+QLabel#cardTitle { color: #8b93a7; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+QLabel#appTitle { font-size: 20px; font-weight: 700; }
+QLabel#muted { color: #7b8397; }
+QLabel { background: transparent; }
+
+QPushButton, QToolButton {
+    background: #1e222c; border: 1px solid #2a2f3c; border-radius: 8px; padding: 6px 12px;
+}
+QPushButton:hover, QToolButton:hover { background: #262b37; border-color: #343a4a; }
+QPushButton:pressed { background: #1a1d26; }
+QPushButton#accent { background: #4f7cff; border-color: #4f7cff; color: white; font-weight: 600; }
+QPushButton#accent:hover { background: #6790ff; }
+QToolButton#typeBtn { padding: 6px 0px; min-width: 0px; }
+QToolButton#typeBtn:checked { background: #20283f; border: 1px solid #4f7cff; }
+
+QComboBox, QLineEdit {
+    background: #1e222c; border: 1px solid #2a2f3c; border-radius: 8px; padding: 5px 8px;
+    selection-background-color: #4f7cff;
+}
+QComboBox:hover { border-color: #3a4156; }
+QComboBox::drop-down { border: none; width: 22px; }
+QComboBox QAbstractItemView { background: #1e222c; border: 1px solid #2a2f3c; selection-background-color: #2b3a66; outline: 0; }
+
+QSlider { min-height: 24px; background: transparent; }
+QSlider::groove:horizontal { height: 4px; background: #2a2f3c; border-radius: 2px; }
+QSlider::sub-page:horizontal { background: #4f7cff; border-radius: 2px; }
+QSlider::handle:horizontal { width: 14px; height: 14px; margin: -5px 0; border-radius: 7px; background: #f2f4fa; }
+QSlider::handle:horizontal:hover { background: #ffffff; }
+
+QCheckBox { spacing: 8px; }
+QCheckBox::indicator { width: 36px; height: 20px; border-radius: 10px; background: #2a2f3c; }
+QCheckBox::indicator:checked { background: #4f7cff; }
+
+QScrollBar:vertical { background: #0e1014; width: 12px; margin: 0; border: none; }
+QScrollBar::handle:vertical { background: #2a2f3c; border-radius: 4px; min-height: 30px; margin: 2px; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: #0e1014; }
+QScrollBar::add-line, QScrollBar::sub-line { height: 0; }
+QToolTip { background: #1e222c; color: #e6e8ee; border: 1px solid #2a2f3c; }
+QMenu { background: #161920; border: 1px solid #2a2f3c; padding: 4px; }
+QMenu::item { padding: 6px 22px; border-radius: 6px; }
+QMenu::item:selected { background: #2b3a66; }
+QMenu::separator { height: 1px; background: #2a2f3c; margin: 4px 8px; }
+
+/* spinbox: stile minimo, niente sub-controlli personalizzati */
+QDoubleSpinBox { background: #1e222c; border: 1px solid #2a2f3c; border-radius: 8px; padding: 0px; min-height: 28px; selection-background-color: #4f7cff; }
+QDoubleSpinBox:hover { border-color: #3a4156; }
