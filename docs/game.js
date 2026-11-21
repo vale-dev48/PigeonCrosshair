@@ -165,7 +165,7 @@ idleScene(); showStart("play");
 const coarse = matchMedia("(pointer: coarse)").matches || !("onpointerlockchange" in document);
 if (coarse) { startMsg.textContent = (T().desktop || "Serve un computer con mouse e tastiera."); stage.dataset.nolock = "1"; }
 
-stage.addEventListener("click", () => { if (!state.locked && !stage.dataset.nolock) stage.requestPointerLock?.(); });
+stage.addEventListener("click", () => { audioInit(); if (!state.locked && !stage.dataset.nolock) stage.requestPointerLock?.(); });
 document.addEventListener("pointerlockchange", () => {
   state.locked = document.pointerLockElement === stage;
   G.playing = state.locked;
@@ -189,14 +189,52 @@ window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; f
 window.pcOnLang = () => { if (!startEl.hidden) showStart(state.over ? "over" : state.needsReset ? "play" : "resume"); };
 
 /* ---------- audio ---------- */
-let ac;
-function beep(f, d, type, vol) {
+// Un solo AudioContext, un'uscita comune con compressore (niente clipping quando i suoni si sovrappongono),
+// attacco di 4 ms e rilascio morbido su ogni suono (niente "click" all'inizio e alla fine).
+let ac = null, master = null, noiseBuf = null;
+function audioInit() {
   try {
-    ac = ac || new AudioContext(); const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
-    o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(40, t + d);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
-    o.connect(g).connect(ac.destination); o.start(); o.stop(t + d);
-  } catch (e) { /* audio non disponibile */ }
+    if (!ac) {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      const comp = ac.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.12;
+      master = ac.createGain(); master.gain.value = 0.55;
+      master.connect(comp); comp.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.25), ac.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === "suspended") ac.resume();
+  } catch (e) { ac = null; }
+  return !!ac;
+}
+function env(g, t, vol, dur) {
+  g.gain.cancelScheduledValues(t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+function tone(f0, f1, dur, type, vol) {
+  if (!audioInit()) return;
+  const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  env(g, t, vol, dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.03);
+}
+function noise(dur, vol, cutoff) {
+  if (!audioInit()) return;
+  const t = ac.currentTime, src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  src.buffer = noiseBuf; f.type = "lowpass"; f.frequency.setValueAtTime(cutoff, t); f.frequency.exponentialRampToValueAtTime(300, t + dur);
+  env(g, t, vol, dur); src.connect(f); f.connect(g); g.connect(master); src.start(t, Math.random() * 0.05); src.stop(t + dur + 0.03);
+}
+const lastPlay = {};
+function sfx(name) {
+  const now = performance.now();
+  const gap = { shot: 0, hit: 45, kill: 90, hurt: 250 }[name];
+  if (now - (lastPlay[name] || 0) < gap) return;       // limita la sovrapposizione
+  lastPlay[name] = now;
+  if (name === "shot") { noise(0.09, 0.45, 3200); tone(170, 55, 0.09, "sine", 0.5); }
+  else if (name === "hit") tone(1250, 900, 0.045, "triangle", 0.16);
+  else if (name === "kill") { tone(520, 780, 0.11, "triangle", 0.2); }
+  else if (name === "hurt") { tone(130, 70, 0.12, "square", 0.1); }
 }
 
 /* ---------- sparo ---------- */
@@ -205,7 +243,7 @@ const tmp = new THREE.Vector3();
 function addFx(mesh, life) { scene.add(mesh); fx.push({ mesh, life, max: life }); }
 const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true });
 function shoot() {
-  beep(240, 0.09, "sawtooth", 0.07);
+  sfx("shot");
   rec = Math.min(rec + 0.012, 0.09);
   ray.setFromCamera({ x: 0, y: 0 }, camera);            // centro dello schermo = dove sta il mirino
   ray.far = 150;
@@ -231,8 +269,8 @@ function shoot() {
     G.hitUntil = performance.now() + 140; G.hitHead = head;
     if (bot.hp <= 0) {
       bot.dead = true; bot.t = 0; setKills(kills + 1); G.killUntil = performance.now() + 260;
-      beep(520, 0.14, "triangle", 0.08);
-    } else beep(900, 0.05, "square", 0.05);
+      sfx("kill");
+    } else sfx("hit");
   } else {
     const sp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true }));
     sp.position.copy(end); addFx(sp, 0.18);
@@ -304,7 +342,7 @@ function animate() {
         b.g.position.x += mx / ml * sp * dt; b.g.position.z += mz / ml * sp * dt; pushOut(b.g.position, 0.4); b.walk += dt * 6;
       } else {
         b.atk -= dt;
-        if (b.atk <= 0) { b.atk = 0.8; setHp(player.hp - 8); hurtEl.style.opacity = 0.65; beep(120, 0.1, "square", 0.06); }
+        if (b.atk <= 0) { b.atk = 0.8; setHp(player.hp - 8); hurtEl.style.opacity = 0.65; sfx("hurt"); }
       }
       bu.legL.rotation.x = Math.sin(b.walk) * 0.7; bu.legR.rotation.x = -Math.sin(b.walk) * 0.7;
       bu.armL.rotation.x = -Math.sin(b.walk) * 0.7; bu.armR.rotation.x = d <= 1.7 ? -1.3 : Math.sin(b.walk) * 0.7;
